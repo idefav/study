@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="study"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/Users/wuzishu/sources/study"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/Users/wuzishu/sources/study"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/Users/wuzishu/sources/study"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="study">
+				<Option output="/Users/wuzishu/sources/study/study" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/wuzishu/sources/study"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.0/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 study"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="study/fast">
+				<Option output="/Users/wuzishu/sources/study/study" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/Users/wuzishu/sources/study"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include/c++/v1"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/10.0.0/include"/>
+					<Add directory="/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/System/Library/Frameworks"/>
+					<Add directory="/Library/Frameworks"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 study/fast"/>
+					<CompileFile command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j8 -f &quot;/Users/wuzishu/sources/study/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/Users/wuzishu/sources/study/Box.cpp">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/Box.h">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/Shape.cpp">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/Shape.h">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/array_metric.cc">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/array_metric.h">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/bucket_leap_array.cc">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/bucket_leap_array.h">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/leap_array.h">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/main.cpp">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/metric.h">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/metric_bucket.cc">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/metric_bucket.h">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/metric_event.h">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/node.h">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/stastic_node.cc">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/stastic_node.h">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/window_wrap.h">
+			<Option target="study"/>
+		</Unit>
+		<Unit filename="/Users/wuzishu/sources/study/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>
