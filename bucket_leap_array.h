@@ -13,7 +13,6 @@ using namespace std;
 namespace Envoy {
     namespace Http {
 
-        static MetricBucket emptyMetricBucket;
 
         class BucketLeapArray : public LeapArray<MetricBucket> {
         private:
@@ -23,9 +22,10 @@ namespace Envoy {
 
             ~BucketLeapArray();
 
-            MetricBucket *newEmptyBucket(long time) override;
+            shared_ptr<MetricBucket> newEmptyBucket(long time) override;
 
-            WindowWrap<MetricBucket> &resetWindowTo(WindowWrap<MetricBucket> &w, long startTime) override;
+            shared_ptr<WindowWrap<MetricBucket>>
+            resetWindowTo(shared_ptr<WindowWrap<MetricBucket>> w, long startTime) override;
         };
 
 

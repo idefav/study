@@ -14,7 +14,7 @@ namespace Envoy {
         class ArrayMetric : public Metric {
         private:
             /* data */
-            BucketLeapArray *data_;
+            shared_ptr<BucketLeapArray> data_;
 
         public:
             ArrayMetric(int sampleCount, int intervalInMs);
@@ -35,7 +35,7 @@ namespace Envoy {
 
             long minRt() override;
 
-            vector<MetricBucket>* windows() override;
+            shared_ptr<vector<shared_ptr<MetricBucket>>> windows() override;
 
             void addException(int count) override;
 

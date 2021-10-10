@@ -99,21 +99,21 @@ namespace Envoy {
 
 //        private
 
-        long MetricBucket::getPassCount() { return pass_request_counter.load(std::memory_order_relaxed); }
+        long MetricBucket::getPassCount() { return pass_request_counter.load(std::memory_order_seq_cst); }
 
-        long MetricBucket::getBlockCount() { return block_request_counter.load(std::memory_order_relaxed); }
+        long MetricBucket::getBlockCount() { return block_request_counter.load(std::memory_order_seq_cst); }
 
         long MetricBucket::getExceptionCount() {
-            return ex_request_counter.load(std::memory_order_relaxed);
+            return ex_request_counter.load(std::memory_order_seq_cst);
         }
 
         long MetricBucket::getSuccessCount() {
-            return success_request_counter.load(std::memory_order_relaxed);
+            return success_request_counter.load(std::memory_order_seq_cst);
         }
 
-        long MetricBucket::getRt() { return rt_counter.load(std::memory_order_relaxed); }
+        long MetricBucket::getRt() { return rt_counter.load(std::memory_order_seq_cst); }
 
-        long MetricBucket::getMinRt() { return min_rt.load(std::memory_order_relaxed); }
+        long MetricBucket::getMinRt() { return min_rt.load(std::memory_order_seq_cst); }
 
         void MetricBucket::setPassCount(long n) { pass_request_counter += n; }
 
@@ -130,21 +130,35 @@ namespace Envoy {
         long MetricBucket::minRt() { return getMinRt(); }
 
         MetricBucket::MetricBucket(const MetricBucket &o) {
-            pass_request_counter.store(o.pass_request_counter.load());
-            block_request_counter.store(o.block_request_counter.load());
-            ex_request_counter.store(o.ex_request_counter.load());
-            success_request_counter.store(o.success_request_counter.load());
-            rt_counter.store(o.rt_counter.load());
-            min_rt.store(o.min_rt.load());
+            pass_request_counter = o.block_request_counter.load();
+            block_request_counter = o.block_request_counter.load();
+            ex_request_counter = o.ex_request_counter.load();
+            success_request_counter = o.success_request_counter.load();
+            rt_counter = o.rt_counter.load();
+            min_rt = o.min_rt.load();
+//            pass_request_counter.store(o.pass_request_counter.load());
+//            block_request_counter.store(o.block_request_counter.load());
+//            ex_request_counter.store(o.ex_request_counter.load());
+//            success_request_counter.store(o.success_request_counter.load());
+//            rt_counter.store(o.rt_counter.load());
+//            min_rt.store(o.min_rt.load());
+            time_ = o.time_;
         }
 
         MetricBucket &MetricBucket::operator=(const MetricBucket &o) {
-            pass_request_counter.store(o.pass_request_counter.load());
-            block_request_counter.store(o.block_request_counter.load());
-            ex_request_counter.store(o.ex_request_counter.load());
-            success_request_counter.store(o.success_request_counter.load());
-            rt_counter.store(o.rt_counter.load());
-            min_rt.store(o.min_rt.load());
+            pass_request_counter = o.block_request_counter.load();
+            block_request_counter = o.block_request_counter.load();
+            ex_request_counter = o.ex_request_counter.load();
+            success_request_counter = o.success_request_counter.load();
+            rt_counter = o.rt_counter.load();
+            min_rt = o.min_rt.load();
+//            pass_request_counter.store(o.pass_request_counter.load());
+//            block_request_counter.store(o.block_request_counter.load());
+//            ex_request_counter.store(o.ex_request_counter.load());
+//            success_request_counter.store(o.success_request_counter.load());
+//            rt_counter.store(o.rt_counter.load());
+//            min_rt.store(o.min_rt.load());
+            time_ = o.time_;
             return *this;
         }
     }

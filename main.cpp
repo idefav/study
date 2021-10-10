@@ -8,9 +8,14 @@
 #include <unistd.h>
 #include <iostream>
 #include <type_traits>
+#include <random>
+#include <time.h>
+#include <atomic>
 
 #include "Box.h"
 #include "concurrency/helloworld.h"
+
+#include "benchmark/benchmark.h"
 
 
 #include "stastic_node.h"
@@ -20,6 +25,7 @@
 
 using namespace shape;
 using namespace std;
+using namespace Envoy::Http;
 
 
 void sigHanler(int sig) {
@@ -79,18 +85,102 @@ void C::init() {
     atomic_init(&min_rt, 0L);
 }
 
+void test() {
+    std::random_device rd;
+    std::mt19937_64 eng(rd());
+    std::uniform_int_distribution<unsigned long long> distr(100, 1000);
+
+    Envoy::Http::StasticNode node = Envoy::Http::StasticNode();
+    node.addPassRequest(1);
+    node.increaseExceptionQps(1);
+    node.addRtAndSuccess(100 + distr(eng), 1);
+    node.increaseThreadNum();
+}
+
+static void BM_test(benchmark::State &state) {
+    for (auto _:state) {
+        test();
+    }
+}
+
+BENCHMARK(BM_test);
+
+//BENCHMARK_MAIN();
+
+static void testAtomicInt() {
+    std::shared_ptr<atomic<int>> ptr = std::make_shared<atomic<int>>(0);
+
+    for (auto i = 0; i < 20; i++) {
+        std::thread([&ptr] {
+            for (int j = 0; j < 1000; ++j) {
+                ptr->fetch_add(1);
+//                std::atomic_store(&ptr, std::make_shared<atomic<int>>(*ptr + 1));
+            }
+//            ptr = make_shared<int>(*ptr + 1);
+        }).join();
+    }
+    cout << "ptr:" << *ptr << endl;
+    cout << "ptr is lock free:" << atomic_is_lock_free(ptr.get()) << endl;
+}
+
+//void testAtomicClass() {
+//
+//    atomic<WindowWrap<MetricBucket>> tt = atomic<WindowWrap<MetricBucket>>();
+//    shared_ptr<atomic<WindowWrap<MetricBucket>>> ptr = make_shared<atomic<WindowWrap<MetricBucket>>>()
+//}
 
 int main() {
+    clock_t startTime,endTime;
+    startTime = clock();
+    std::random_device rd;
+    std::mt19937_64 eng(rd());
+    std::uniform_int_distribution<unsigned long long> distr(100, 1000);
 
     Envoy::Http::StasticNode node = Envoy::Http::StasticNode();
 
-    node.addPassRequest(1);
-    node.addPassRequest(1);
+//    node.addPassRequest(1);
+//    node.addPassRequest(1);
 //
 //    node.addPassRequest(100);
 //
-    cout << "PassQPS:" << node.passQps() << endl;
+//    node.addRtAndSuccess(1000, 1);
+//    node.increaseThreadNum();
+//
+//    node.increaseBlockQps(1);
+//    node.increaseExceptionQps(1);
 
+    vector<thread> workers;
+    workers.reserve(1000);
+    for (int i = 0; i < 100; ++i) {
+        workers.emplace_back([&]() {
+            for (int j = 0; j < 10000; ++j) {
+                node.addPassRequest(1);
+                node.increaseExceptionQps(1);
+                node.addRtAndSuccess(100 + distr(eng), 1);
+                node.increaseThreadNum();
+//                this_thread::yield();
+//                cout << "ThreadId:" << this_thread::get_id() << endl;
+            }
+        });
+    }
+
+    std::for_each(workers.begin(), workers.end(), [](std::thread &t) {
+        t.join();
+    });
+
+
+    cout << "mainThreadId:" << this_thread::get_id() << endl;
+
+    cout << "PassQPS:" << node.passQps() << endl;
+    cout << "minRT:" << node.minRt() << endl;
+    cout << "avgRT:" << node.avgRt() << endl;
+    cout << "threadNum:" << node.curThreadNum() << endl;
+    cout << "exQPS:" << node.exceptionQps() << endl;
+
+    testAtomicInt();
+
+    endTime = clock();
+    cout << "Totle Time : " <<(double)(endTime - startTime) / CLOCKS_PER_SEC << "s" << endl;
 //    concurrency::HelloWorld *helloWorld = new concurrency::HelloWorld();
 //    helloWorld->run();
 //    std::thread t([] {
@@ -106,6 +196,8 @@ int main() {
 //    cout << "B<C>:" << std::is_trivially_copyable<Envoy::Http::WindowWrap<Envoy::Http::MetricBucket>>::value << endl;
 ////    cout << "NULL:" << std::is_trivially_copyable<__null>::value << endl;
 }
+
+
 
 /*int main() {
     Box *box = new Box(1, 2, 3);

@@ -63,46 +63,46 @@ namespace Envoy {
             int intervalInMs_;
             double intervalInSecond_;
 
-            vector<WindowWrap<T>> *array_;
+            shared_ptr<vector<shared_ptr<WindowWrap<T>>>> array_;
 
             long calculateWindowStart(long timeMillis);
 
-            virtual WindowWrap<T> &resetWindowTo(WindowWrap<T> &windowWrap, long startTime) = 0;
+            virtual shared_ptr<WindowWrap<T>> resetWindowTo(shared_ptr<WindowWrap<T>> windowWrap, long startTime) = 0;
 
         public:
             LeapArray(int sampleCount, int intervalInMs);
 
-            virtual ~LeapArray() { delete array_; };
+            virtual ~LeapArray() {};
 
-            WindowWrap<T> *currentWindow();
+            shared_ptr<WindowWrap<T>> currentWindow();
 
-            WindowWrap<T> *currentWindow(long timeMillis);
+            shared_ptr<WindowWrap<T>> currentWindow(long timeMillis);
 
-            virtual T *newEmptyBucket(long timeMillis) = 0;
+            virtual shared_ptr<T> newEmptyBucket(long timeMillis) = 0;
 
-            WindowWrap<T> *getPreviousWindow(long timeMillis);
+            shared_ptr<WindowWrap<T>> getPreviousWindow(long timeMillis);
 
-            WindowWrap<T> *getPreviousWindow();
+            shared_ptr<WindowWrap<T>> getPreviousWindow();
 
-            T *getWindowValue(long timeMillis);
+            shared_ptr<T> getWindowValue(long timeMillis);
 
-            bool isWindowDeprecated(WindowWrap<T> &windowWrap);
+            bool isWindowDeprecated(shared_ptr<WindowWrap<T>> windowWrap);
 
-            bool isWindowDeprecated(long time, WindowWrap<T> &windowWrap);
+            bool isWindowDeprecated(long time, shared_ptr<WindowWrap<T>> windowWrap);
 
-            vector<WindowWrap<T>> *list();
+            shared_ptr<vector<shared_ptr<WindowWrap<T>>>> list();
 
-            vector<WindowWrap<T>> *list(long validTime);
+            shared_ptr<vector<shared_ptr<WindowWrap<T>>>> list(long validTime);
 
-            vector<WindowWrap<T>> *listAll();
+            shared_ptr<vector<shared_ptr<WindowWrap<T>>>> listAll();
 
-            vector<T> *values();
+            shared_ptr<vector<shared_ptr<T>>> values();
 
-            vector<T> *values(long timeMillis);
+            shared_ptr<vector<shared_ptr<T>>> values(long timeMillis);
 
-            WindowWrap<T> *getValidHead(long timeMillis);
+            shared_ptr<WindowWrap<T>> getValidHead(long timeMillis);
 
-            WindowWrap<T> *getValidHead();
+            shared_ptr<WindowWrap<T>> getValidHead();
 
             int getSampleCount();
 
@@ -125,12 +125,9 @@ namespace Envoy {
             intervalInMs_ = intervalInMs;
             intervalInSecond_ = intervalInMs / 1000;
             sampleCount_ = sampleCount;
-            array_ = new vector<WindowWrap<T>>();
-            for (int i = 0; i < sampleCount_; i++) {
-                WindowWrap<T> win = WindowWrap<T>(windowLengthInMs_, 0L, T());
-//
-                array_->push_back(win);
-//                test_->push_back(i);
+            array_ = make_shared<vector<shared_ptr<WindowWrap<T>>>>();
+            for (int i = 0; i < sampleCount_; i++) {//
+                array_->push_back(make_shared<WindowWrap<T>>(windowLengthInMs_, 0L, make_shared<T>()));
             }
         }
 
@@ -150,16 +147,16 @@ namespace Envoy {
         }
 
         template<typename T>
-        WindowWrap<T> *LeapArray<T>::currentWindow() {
+        shared_ptr<WindowWrap<T>> LeapArray<T>::currentWindow() {
             auto ts = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
             return currentWindow(ts);
         }
 
         template<typename T>
-        WindowWrap<T> *LeapArray<T>::currentWindow(long timeMillis) {
+        shared_ptr<WindowWrap<T>> LeapArray<T>::currentWindow(long timeMillis) {
 
             if (timeMillis < 0) {
-                return NULL;
+                return nullptr;
             }
 
             int idx = calculateTimeIdx(timeMillis);
@@ -173,15 +170,17 @@ namespace Envoy {
              * (2) Bucket is up-to-date, then just return the bucket.
              * (3) Bucket is deprecated, then reset current bucket and clean all deprecated buckets.
              */
+//            lock_guard<mutex> lock(updateLock_);
             while (true) {
-                WindowWrap<T> old = array_->at(idx);
+                shared_ptr<WindowWrap<T>> old = array_->at(idx);
+
 //                if (&old == NULL) {
 //                    WindowWrap<T> window =
 //                            WindowWrap<T>(windowLengthInMs_, windowStart, *newEmptyBucket(timeMillis));
 //                    array_->push_back(WindowWrap<T>(window));
 //                    return &window;
 //                }
-                if (&old == NULL) {
+                if (old == nullptr || old->value() == nullptr) {
                     /*
                      *     B0       B1      B2    NULL      B4
                      * ||_______|_______|_______|_______|_______||___
@@ -194,16 +193,37 @@ namespace Envoy {
                      * then try to update circular array via a CAS operation. Only one thread can
                      * succeed to update, while other threads yield its time slice.
                      */
-                    WindowWrap<T> window =
-                            WindowWrap<T>(windowLengthInMs_, windowStart, *newEmptyBucket(timeMillis));
-                    array_->at(idx) = window;
-                    return &window;
+
+
+                    if (old == nullptr) {
+                        auto window = make_shared<WindowWrap<T>>(
+                                WindowWrap<T>(windowLengthInMs_, windowStart, newEmptyBucket(timeMillis)));
+                        lock_guard<mutex> lock(updateLock_);
+                        array_->at(idx) = window;
+                        return array_->at(idx);
+                    } else {
+                        if (!old->setWindowStart(windowStart)) {
+                            continue;
+                        }
+                        if (!old->setWindowLengthInMs(windowLengthInMs_)) {
+                            continue;
+                        }
+                        if (old->setValue(newEmptyBucket(timeMillis))) {
+                            continue;
+                        }
+                        return array_->at(idx);
+                    }
+//                    array_->at(idx) = window;
+//                    array_->push_back(window);
+//                    array_->assign(idx, make_shared<WindowWrap<T>>(
+//                            WindowWrap<T>(windowLengthInMs_, windowStart, newEmptyBucket(timeMillis))));
+//                    return array_->at(idx);
 //                    if (old.compare_exchange_weak(old, window)) {
 //                        return window;
 //                    } else {
 //                        std::this_thread::yield();
 //                    }
-                } else if (windowStart == old.windowStart()) {
+                } else if (windowStart == old->windowStart()) {
                     /*
                      *     B0       B1      B2     B3      B4
                      * ||_______|_______|_______|_______|_______||___
@@ -215,8 +235,8 @@ namespace Envoy {
                      * If current {@code windowStart} is equal to the start timestamp of old bucket,
                      * that means the time is within the bucket, so directly return the bucket.
                      */
-                    return &old;
-                } else if (windowStart > old.windowStart()) {
+                    return old;
+                } else if (windowStart > old->windowStart()) {
                     /*
                      *   (old)
                      *             B0       B1      B2    NULL      B4
@@ -234,156 +254,149 @@ namespace Envoy {
                      * The update lock is conditional (tiny scope) and will take effect only when
                      * bucket is deprecated, so in most cases it won't lead to performance loss.
                      */
-                    lock_guard<mutex> lock(updateLock_);
-                    WindowWrap<T> wrap = resetWindowTo(old, windowStart);
-                    return &wrap;
-                } else if (windowStart < old.windowStart()) {
+//                    lock_guard<mutex> lock(updateLock_);
+                    auto wrap = resetWindowTo(old, windowStart);
+//                    array_->at(idx) = wrap;
+                    return wrap;
+                } else if (windowStart < old->windowStart()) {
+//                    lock_guard<mutex> lock(updateLock_);
                     // Should not go through here, as the provided time is already behind.
-                    WindowWrap<T> wrap = WindowWrap<T>(windowLengthInMs_, windowStart,
-                                                       *newEmptyBucket(timeMillis));
-                    return &wrap;
+                    auto wrap = make_shared<WindowWrap<T>>(windowLengthInMs_, windowStart,
+                                                           newEmptyBucket(timeMillis));
+                    return wrap;
                 }
             }
         }
 
         template<typename T>
-        WindowWrap<T> *LeapArray<T>::getPreviousWindow(long timeMillis) {
+        shared_ptr<WindowWrap<T>> LeapArray<T>::getPreviousWindow(long timeMillis) {
             if (timeMillis < 0) {
-                return NULL;
+                return nullptr;
             }
             int idx = calculateTimeIdx(timeMillis - windowLengthInMs_);
             timeMillis = timeMillis - windowLengthInMs_;
-            WindowWrap<T> wrap = array_->at(idx);
+            auto wrap = array_->at(idx);
 
-            if (&wrap == NULL || isWindowDeprecated(wrap)) {
-                return NULL;
+            if (wrap == nullptr || isWindowDeprecated(wrap)) {
+                return nullptr;
             }
 
-            if (wrap.windowStart() + windowLengthInMs_ < (timeMillis)) {
-                return NULL;
-            }
-
-            return &wrap;
-        }
-
-        template<typename T>
-        WindowWrap<T> *LeapArray<T>::getPreviousWindow() {
-            auto ts = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-            return getPreviousWindow(ts);
-        }
-
-        template<typename T>
-        T *LeapArray<T>::getWindowValue(long timeMillis) {
-            if (timeMillis < 0) {
-                return NULL;
-            }
-            int idx = calculateTimeIdx(timeMillis);
-
-            WindowWrap<T> bucket = array_->at(idx);
-
-            if (&bucket == NULL || !bucket.isTimeInWindow(timeMillis)) {
-                return NULL;
-            }
-
-            return &bucket.value();
-        }
-
-        template<typename T>
-        bool LeapArray<T>::isWindowDeprecated(WindowWrap<T> &windowWrap) {
-            auto ts = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-            return isWindowDeprecated(ts, windowWrap);
-        }
-
-        template<typename T>
-        bool LeapArray<T>::isWindowDeprecated(long time, WindowWrap<T> &windowWrap) {
-            return time - windowWrap.windowStart() > intervalInMs_;
-        }
-
-        template<typename T>
-        vector<WindowWrap<T>> *
-
-        LeapArray<T>::list(long validTime) {
-            int size = array_->size();
-            vector<WindowWrap<T>>
-                    result(size);
-
-            for (int i = 0; i < size; i++) {
-                WindowWrap<T> windowWrap = array_->get(i).get();
-                if (windowWrap == NULL || isWindowDeprecated(validTime, windowWrap)) {
-                    continue;
-                }
-                result.add(windowWrap);
-            }
-
-            return result;
-        }
-
-        template<typename T>
-        vector<WindowWrap<T>> *
-
-        LeapArray<T>::list() {
-            auto ts = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-            return list(ts);
-        }
-
-        template<typename T>
-        vector<WindowWrap<T>> *
-
-        LeapArray<T>::listAll() {
-            int size = array_->size();
-            vector<WindowWrap<T>>
-                    result(size);
-
-            for (int i = 0; i < size; i++) {
-                WindowWrap<T> windowWrap = array_->get(i);
-                if (windowWrap == NULL) {
-                    continue;
-                }
-                result.add(windowWrap);
-            }
-
-            return result;
-        }
-
-        template<typename T>
-        vector<T> *LeapArray<T>::values(long timeMillis) {
-            if (timeMillis < 0) {
-                return NULL;
-            }
-            int size = array_->size();
-            vector<T> result = vector<T>(size);
-
-            for (int i = 0; i < size; i++) {
-                WindowWrap<T> windowWrap = array_->at(i);
-                if (&windowWrap == NULL || isWindowDeprecated(timeMillis, windowWrap)) {
-                    continue;
-                }
-                result.push_back(windowWrap.value());
-            }
-            return &result;
-        }
-
-        template<typename T>
-        vector<T> *LeapArray<T>::values() {
-            auto ts = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
-            return values(ts);
-        }
-
-        template<typename T>
-        WindowWrap<T> *LeapArray<T>::getValidHead(long timeMillis) {
-            // Calculate index for expected head time.
-            int idx = calculateTimeIdx(timeMillis + windowLengthInMs_);
-
-            WindowWrap<T> wrap = array_->get(idx).get();
-            if (wrap == NULL || isWindowDeprecated(wrap)) {
-                return NULL;
+            if (wrap->windowStart() + windowLengthInMs_ < (timeMillis)) {
+                return nullptr;
             }
 
             return wrap;
         }
 
         template<typename T>
-        WindowWrap<T> *LeapArray<T>::getValidHead() {
+        shared_ptr<WindowWrap<T>> LeapArray<T>::getPreviousWindow() {
+            auto ts = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+            return getPreviousWindow(ts);
+        }
+
+        template<typename T>
+        shared_ptr<T> LeapArray<T>::getWindowValue(long timeMillis) {
+            if (timeMillis < 0) {
+                return nullptr;
+            }
+            int idx = calculateTimeIdx(timeMillis);
+
+            auto bucket = array_->at(idx);
+
+            if (bucket == nullptr || !bucket->isTimeInWindow(timeMillis)) {
+                return nullptr;
+            }
+
+            return bucket->value();
+        }
+
+        template<typename T>
+        bool LeapArray<T>::isWindowDeprecated(shared_ptr<WindowWrap<T>> windowWrap) {
+            auto ts = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+            return isWindowDeprecated(ts, windowWrap);
+        }
+
+        template<typename T>
+        bool LeapArray<T>::isWindowDeprecated(long time, shared_ptr<WindowWrap<T>> windowWrap) {
+            return time - windowWrap->windowStart() > intervalInMs_;
+        }
+
+        template<typename T>
+        shared_ptr<vector<shared_ptr<WindowWrap<T>>>> LeapArray<T>::list(long validTime) {
+            int size = array_->size();
+            shared_ptr<vector<shared_ptr<WindowWrap<T>>>> result = make_shared<vector<shared_ptr<WindowWrap<T>>>>(size);
+
+            for (int i = 0; i < size; i++) {
+                auto windowWrap = array_->at(i);
+                if (windowWrap == nullptr || isWindowDeprecated(validTime, windowWrap)) {
+                    continue;
+                }
+                result->at(i) = windowWrap;
+            }
+
+            return result;
+        }
+
+        template<typename T>
+        shared_ptr<vector<shared_ptr<WindowWrap<T>>>> LeapArray<T>::list() {
+            auto ts = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+            return list(ts);
+        }
+
+        template<typename T>
+        shared_ptr<vector<shared_ptr<WindowWrap<T>>>> LeapArray<T>::listAll() {
+            int size = array_->size();
+            shared_ptr<vector<shared_ptr<WindowWrap<T>>>> result = make_shared<vector<shared_ptr<WindowWrap<T>>>>(size);
+            for (int i = 0; i < size; i++) {
+                auto windowWrap = array_->at(i);
+                if (windowWrap == nullptr) {
+                    continue;
+                }
+                result->at(i) = windowWrap;
+            }
+
+            return result;
+        }
+
+        template<typename T>
+        shared_ptr<vector<shared_ptr<T>>> LeapArray<T>::values(long timeMillis) {
+            if (timeMillis < 0) {
+                return nullptr;
+            }
+            int size = array_->size();
+            shared_ptr<vector<shared_ptr<T>>> result = make_shared<vector<shared_ptr<T>>>(size);
+
+            for (int i = 0; i < size; i++) {
+                shared_ptr<WindowWrap<T>> windowWrap = array_->at(i);
+                if (windowWrap == nullptr || isWindowDeprecated(timeMillis, windowWrap)) {
+                    continue;
+                }
+                result->at(i) = windowWrap->value();
+            }
+            return result;
+        }
+
+        template<typename T>
+        shared_ptr<vector<shared_ptr<T>>> LeapArray<T>::values() {
+            auto ts = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
+            return values(ts);
+        }
+
+        template<typename T>
+        shared_ptr<WindowWrap<T>> LeapArray<T>::getValidHead(long timeMillis) {
+            // Calculate index for expected head time.
+            int idx = calculateTimeIdx(timeMillis + windowLengthInMs_);
+
+            auto wrap = array_->at(idx);
+            if (wrap == nullptr || isWindowDeprecated(wrap)) {
+                return nullptr;
+            }
+
+            return wrap;
+        }
+
+        template<typename T>
+        shared_ptr<WindowWrap<T>> LeapArray<T>::getValidHead() {
             auto ts = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
             return getValidHead(ts);
         }

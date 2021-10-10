@@ -22,6 +22,7 @@ namespace Envoy {
             atomic_long success_request_counter;
             atomic_long rt_counter;
             atomic_long min_rt;
+            long time_;
 
 //             methods
             void init();
@@ -56,9 +57,13 @@ namespace Envoy {
         public:
             MetricBucket() = default;
 
+            MetricBucket(long time) : time_(time) { init(); };
+
             MetricBucket(const MetricBucket &o);
 
             MetricBucket &operator=(const MetricBucket &o);
+
+            ~MetricBucket() = default;
 
             // methods
             void reset();

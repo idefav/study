@@ -28,7 +28,7 @@ namespace Envoy {
 
             virtual long minRt() = 0;
 
-            virtual vector<MetricBucket> *windows() = 0;
+            virtual shared_ptr<vector<shared_ptr<MetricBucket>>> windows() = 0;
 
             virtual void addException(int n) = 0;
 

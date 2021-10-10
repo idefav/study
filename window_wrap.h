@@ -9,6 +9,7 @@
 
 using std::ostringstream;
 using std::string;
+using namespace std;
 
 namespace Envoy {
     namespace Http {
@@ -18,12 +19,15 @@ namespace Envoy {
             /* data */
             long windowLengthInMs_;
             long windowStart_;
-            T value_;
+            shared_ptr<T> value_;
+
+            mutex lock_;
+            atomic_flag flag_ = ATOMIC_FLAG_INIT;
 
         public:
             WindowWrap() = default;
 
-            WindowWrap(long windowLengthInMs, long windowStart, T value)
+            WindowWrap(long windowLengthInMs, long windowStart, shared_ptr<T> value)
                     : windowLengthInMs_(windowLengthInMs), windowStart_(windowStart), value_(value) {};
 
             WindowWrap(long windowLengthInMs, long windowStart)
@@ -35,17 +39,23 @@ namespace Envoy {
             WindowWrap<T> &operator=(const WindowWrap<T> &o);
 //            ~WindowWrap();
 
+            bool setWindowLengthInMs(long windowLengthInMs);
+
             long windowLength();
+
+            bool setWindowStart(long windowStart);
 
             long windowStart();
 
-            T &value();
+            shared_ptr<T> value();
 
-            void setValue(T v);
+            bool setValue(shared_ptr<T> v);
 
             WindowWrap<T> &resetTo(long startTime);
 
             bool isTimeInWindow(long timeMillis);
+
+            atomic_flag getFlag();
 
             string toString();
         };
@@ -56,13 +66,43 @@ namespace Envoy {
         long WindowWrap<T>::windowLength() { return windowLengthInMs_; }
 
         template<typename T>
+        bool WindowWrap<T>::setWindowLengthInMs(long windowLengthInMs) {
+            if (flag_.test_and_set()) {
+                windowLengthInMs_ = windowLengthInMs;
+                flag_.clear();
+                return true;
+            }
+            return false;
+
+        }
+
+        template<typename T>
+        bool WindowWrap<T>::setWindowStart(long windowStart) {
+            if (flag_.test_and_set()) {
+                windowStart_ = windowStart;
+                flag_.clear();
+                return true;
+            }
+            return false;
+
+        }
+
+
+        template<typename T>
         long WindowWrap<T>::windowStart() { return windowStart_; }
 
         template<typename T>
-        T &WindowWrap<T>::value() { return value_; }
+        shared_ptr<T> WindowWrap<T>::value() { return value_; }
 
         template<typename T>
-        void WindowWrap<T>::setValue(T v) { value_ = v; }
+        bool WindowWrap<T>::setValue(shared_ptr<T> v) {
+            if (flag_.test_and_set()) {
+                value_ = v;
+                flag_.clear();
+                return true;
+            }
+            return false;
+        }
 
         template<typename T>
         WindowWrap<T> &WindowWrap<T>::resetTo(long startTime) {
@@ -80,7 +120,7 @@ namespace Envoy {
             ostringstream result;
             result << "WindowWrap{"
                    << "windowLengthInMs=" << windowLengthInMs_ << ", windowStart=" << windowStart_
-                   << ", value=" << value_ << "}";
+                   << ", value=" << value_.get() << "}";
             return result.str();
         }
 

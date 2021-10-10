@@ -9,16 +9,14 @@ namespace Envoy {
 
         BucketLeapArray::~BucketLeapArray() {}
 
-        MetricBucket *BucketLeapArray::newEmptyBucket(long time) {
-            printf("time: %ld", time);
-            MetricBucket metricBucket = MetricBucket();
-            return &metricBucket;
+        shared_ptr<MetricBucket> BucketLeapArray::newEmptyBucket(long time) {
+            return make_shared<MetricBucket>(time);
         }
 
-        WindowWrap<MetricBucket> &BucketLeapArray::resetWindowTo(WindowWrap<MetricBucket> &w,
-                                                                 long startTime) {
-            w = w.resetTo(startTime);
-            w.value().reset();
+        shared_ptr<WindowWrap<MetricBucket>> BucketLeapArray::resetWindowTo(shared_ptr<WindowWrap<MetricBucket>> w,
+                                                                            long startTime) {
+            w->resetTo(startTime);
+            w->value().reset();
             return w;
         }
     } // namespace Http

@@ -10,18 +10,19 @@ namespace Envoy {
     namespace Http {
 
         ArrayMetric::ArrayMetric(int sampleCount, int intervalInMs) {
-            data_ = new BucketLeapArray(sampleCount, intervalInMs);
+            data_ = make_shared<BucketLeapArray>(sampleCount, intervalInMs);
         }
 
-        ArrayMetric::~ArrayMetric() { delete data_; }
+        ArrayMetric::~ArrayMetric() {}
 
         long ArrayMetric::success() {
             data_->currentWindow();
             long success = 0;
 
-            vector<MetricBucket> *list = data_->values();
-            std::for_each(list->begin(), list->end(), [&](MetricBucket &window) {
-                success += window.success();
+            auto list = data_->values();
+            std::for_each(list->begin(), list->end(), [&](shared_ptr<MetricBucket> &window) {
+                if (window == nullptr)return;
+                success += window->success();
             });
             return success;
         }
@@ -30,10 +31,11 @@ namespace Envoy {
             data_->currentWindow();
             long success = 0;
 
-            vector<MetricBucket> *list = data_->values();
-            std::for_each(list->begin(), list->end(), [&](auto &window) {
-                if (window.success() > success) {
-                    success = window.success();
+            auto list = data_->values();
+            std::for_each(list->begin(), list->end(), [&](shared_ptr<MetricBucket> &window) {
+                if (window == nullptr)return;
+                if (window->success() > success) {
+                    success = window->success();
                 }
             });
             return max(success, 1L);
@@ -42,9 +44,10 @@ namespace Envoy {
         long ArrayMetric::exception() {
             data_->currentWindow();
             long exception = 0;
-            vector<MetricBucket> *list = data_->values();
-            std::for_each(list->begin(), list->end(), [&](auto &window) {
-                exception += window.exception();
+            auto list = data_->values();
+            std::for_each(list->begin(), list->end(), [&](shared_ptr<MetricBucket> &window) {
+                if (window == nullptr)return;
+                exception += window->exception();
             });
             return exception;
         }
@@ -52,9 +55,10 @@ namespace Envoy {
         long ArrayMetric::block() {
             data_->currentWindow();
             long block = 0;
-            vector<MetricBucket> *list = data_->values();
-            std::for_each(list->begin(), list->end(), [&](auto &window) {
-                block += window.block();
+            auto list = data_->values();
+            std::for_each(list->begin(), list->end(), [&](shared_ptr<MetricBucket> &window) {
+                if (window == nullptr)return;
+                block += window->block();
             });
             return block;
         }
@@ -62,10 +66,12 @@ namespace Envoy {
         long ArrayMetric::pass() {
             data_->currentWindow();
             long pass = 0;
-            vector<MetricBucket> *list = data_->values();
+            auto list = data_->values();
 
-            std::for_each(list->begin(), list->end(), [&](auto &window) {
-                pass += window.pass();
+
+            std::for_each(list->begin(), list->end(), [&](shared_ptr<MetricBucket> &window) {
+                if (window == nullptr)return;
+                pass += window->pass();
             });
             return pass;
         }
@@ -73,9 +79,10 @@ namespace Envoy {
         long ArrayMetric::rt() {
             data_->currentWindow();
             long rt = 0;
-            vector<MetricBucket> *list = data_->values();
-            std::for_each(list->begin(), list->end(), [&](auto &window) {
-                rt += window.rt();
+            auto list = data_->values();
+            std::for_each(list->begin(), list->end(), [&](shared_ptr<MetricBucket> &window) {
+                if (window == nullptr)return;
+                rt += window->rt();
             });
 
             return rt;
@@ -84,81 +91,83 @@ namespace Envoy {
         long ArrayMetric::minRt() {
             data_->currentWindow();
             long rt = 5000L;
-            vector<MetricBucket> *list = data_->values();
-            std::for_each(list->begin(), list->end(), [&](auto &window) {
-                if (window.minRt() < rt) {
-                    rt = window.minRt();
+            auto list = data_->values();
+            std::for_each(list->begin(), list->end(), [&](shared_ptr<MetricBucket> &window) {
+                if (window == nullptr)return;
+                if (window->minRt() < rt) {
+                    rt = window->minRt();
                 }
             });
 
             return max(1L, rt);
         }
 
-        vector<MetricBucket> *ArrayMetric::windows() {
+        shared_ptr<vector<shared_ptr<MetricBucket>>> ArrayMetric::windows() {
             data_->currentWindow();
             return data_->values();
         }
 
         void ArrayMetric::addException(int count) {
-            WindowWrap<MetricBucket> *wrap = data_->currentWindow();
-            wrap->value().addException(count);
+            auto wrap = data_->currentWindow();
+            wrap->value()->addException(count);
         }
 
         void ArrayMetric::addBlock(int count) {
-            WindowWrap<MetricBucket> *wrap = data_->currentWindow();
-            wrap->value().addBlock(count);
+            auto wrap = data_->currentWindow();
+            wrap->value()->addBlock(count);
         }
 
         void ArrayMetric::addSuccess(int count) {
-            WindowWrap<MetricBucket> *wrap = data_->currentWindow();
-            wrap->value().addSuccess(count);
+            auto wrap = data_->currentWindow();
+            wrap->value()->addSuccess(count);
         }
 
         void ArrayMetric::addPass(int count) {
-            WindowWrap<MetricBucket> *wrap = data_->currentWindow();
-            MetricBucket &bucket = wrap->value();
-            bucket.addPass(count);
+            auto wrap = data_->currentWindow();
+            auto bucket = wrap->value();
+            bucket->addPass(count);
             wrap->setValue(bucket);
         }
 
         void ArrayMetric::addRT(long rt) {
-            WindowWrap<MetricBucket> *wrap = data_->currentWindow();
-            wrap->value().addRt(rt);
+            auto wrap = data_->currentWindow();
+            wrap->value()->addRt(rt);
         }
 
         long ArrayMetric::previousWindowBlock() {
             data_->currentWindow();
-            WindowWrap<MetricBucket> *wrap = data_->getPreviousWindow();
-            if (wrap == NULL) {
+            auto wrap = data_->getPreviousWindow();
+            if (wrap == nullptr) {
                 return 0;
             }
-            return wrap->value().block();
+            return wrap->value()->block();
         }
 
         long ArrayMetric::previousWindowPass() {
             data_->currentWindow();
             auto wrap = data_->getPreviousWindow();
-            if (wrap == NULL) {
+            if (wrap == nullptr) {
                 return 0;
             }
-            return wrap->value().pass();
+            return wrap->value()->pass();
         }
 
         void ArrayMetric::add(MetricEvent event, long count) {
-            data_->currentWindow()->value().add(event, count);
+            data_->currentWindow()->value()->add(event, count);
         }
 
         long ArrayMetric::getCurrentCount(MetricEvent event) {
-            return data_->currentWindow()->value().get(event);
+            return data_->currentWindow()->value()->get(event);
         }
 
         long ArrayMetric::getSum(MetricEvent event) {
             data_->currentWindow();
             long sum = 0;
 
-            vector<MetricBucket> *buckets = data_->values();
-            std::for_each(buckets->begin(), buckets->end(), [&](auto &bucket) {
-                sum += bucket.get(event);
+            auto buckets = data_->values();
+            std::for_each(buckets->begin(), buckets->end(), [&](shared_ptr<MetricBucket> &bucket) {
+                if (bucket == nullptr)return;
+                sum += bucket->get(event);
             });
             return sum;
         }
@@ -168,8 +177,8 @@ namespace Envoy {
         }
 
         long ArrayMetric::getWindowPass(long timeMillis) {
-            MetricBucket *bucket = data_->getWindowValue(timeMillis);
-            if (bucket == NULL) {
+            auto bucket = data_->getWindowValue(timeMillis);
+            if (bucket == nullptr) {
                 return 0L;
             }
             return bucket->pass();
