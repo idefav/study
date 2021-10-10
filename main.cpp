@@ -15,7 +15,7 @@
 #include "Box.h"
 #include "concurrency/helloworld.h"
 
-#include "benchmark/benchmark.h"
+//#include "benchmark/benchmark.h"
 
 
 #include "stastic_node.h"
@@ -97,13 +97,13 @@ void test() {
     node.increaseThreadNum();
 }
 
-static void BM_test(benchmark::State &state) {
-    for (auto _:state) {
-        test();
-    }
-}
+//static void BM_test(benchmark::State &state) {
+//    for (auto _:state) {
+//        test();
+//    }
+//}
 
-BENCHMARK(BM_test);
+//BENCHMARK(BM_test);
 
 //BENCHMARK_MAIN();
 
@@ -130,7 +130,7 @@ static void testAtomicInt() {
 //}
 
 int main() {
-    clock_t startTime,endTime;
+    clock_t startTime, endTime;
     startTime = clock();
     std::random_device rd;
     std::mt19937_64 eng(rd());
@@ -150,15 +150,15 @@ int main() {
 //    node.increaseExceptionQps(1);
 
     vector<thread> workers;
-    workers.reserve(1000);
+    workers.reserve(10);
     for (int i = 0; i < 100; ++i) {
         workers.emplace_back([&]() {
-            for (int j = 0; j < 10000; ++j) {
+            for (int j = 0; j < 1; ++j) {
                 node.addPassRequest(1);
                 node.increaseExceptionQps(1);
-                node.addRtAndSuccess(100 + distr(eng), 1);
+                node.addRtAndSuccess(100L + distr(eng), 1);
                 node.increaseThreadNum();
-//                this_thread::yield();
+                this_thread::yield();
 //                cout << "ThreadId:" << this_thread::get_id() << endl;
             }
         });
@@ -171,16 +171,16 @@ int main() {
 
     cout << "mainThreadId:" << this_thread::get_id() << endl;
 
-    cout << "PassQPS:" << node.passQps() << endl;
+    cout << "PassQPS:" << long(node.passQps()) << endl;
     cout << "minRT:" << node.minRt() << endl;
     cout << "avgRT:" << node.avgRt() << endl;
     cout << "threadNum:" << node.curThreadNum() << endl;
-    cout << "exQPS:" << node.exceptionQps() << endl;
+    cout << "exQPS:" << long(node.exceptionQps()) << endl;
 
     testAtomicInt();
 
     endTime = clock();
-    cout << "Totle Time : " <<(double)(endTime - startTime) / CLOCKS_PER_SEC << "s" << endl;
+    cout << "Totle Time : " << (double) (endTime - startTime) / CLOCKS_PER_SEC << "s" << endl;
 //    concurrency::HelloWorld *helloWorld = new concurrency::HelloWorld();
 //    helloWorld->run();
 //    std::thread t([] {

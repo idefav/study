@@ -55,7 +55,7 @@ namespace Envoy {
 
             /* data */
         public:
-            MetricBucket() = default;
+            MetricBucket() { init(); };
 
             MetricBucket(long time) : time_(time) { init(); };
 
