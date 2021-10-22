@@ -151,13 +151,15 @@ int main() {
 
     vector<thread> workers;
     workers.reserve(10);
-    for (int i = 0; i < 100; ++i) {
+    for (int i = 0; i < 1; ++i) {
         workers.emplace_back([&]() {
-            for (int j = 0; j < 1; ++j) {
+            for (int j = 0; j < 100000000; ++j) {
                 node.addPassRequest(1);
                 node.increaseExceptionQps(1);
                 node.addRtAndSuccess(100L + distr(eng), 1);
                 node.increaseThreadNum();
+                cout << "PassQps:" << node.passQps() << endl;
+//                sleep(1);
                 this_thread::yield();
 //                cout << "ThreadId:" << this_thread::get_id() << endl;
             }
